@@ -2,6 +2,14 @@
 import api from "@/lib/api";
 
 /**
+ * [ADMIN/SUPERADMIN] Ambil semua order (semua customer).
+ */
+export const getOrders = async () => {
+    const { data } = await api.get("/orders");
+    return data.data;
+};
+
+/**
  * Buat order baru.
  * payload: {
  *   event_id: number,
