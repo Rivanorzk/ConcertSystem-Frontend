@@ -11,10 +11,10 @@ import { deleteEvent, getEventById, updateEvent } from "@/services/eventService"
 import { getCategories } from "@/services/categoryService";
 import { getTicketCategories } from "@/services/ticketCategoryService";
 import {
-    createEventTicketCategory,
-    deleteEventTicketCategory,
+    createEventTicketCategories,
+    deleteEventTicketCategories,
     getByEvent,
-    updateEventTicketCategory,
+    updateEventTicketCategories,
 } from "@/services/eventTicketCategoryService";
 import LoadingSpinner from "@/components/loadingSpinner";
 import CrudModal from "@/components/crudModal";

@@ -41,3 +41,8 @@ export const deleteEventTicketCategories = async (id) => {
 
     return response.data.data;
 };
+
+export const getByEvent = async (eventId) => {
+    const { data } = await api.get(`/event-ticket-categories/event/${eventId}`);
+    return data.data;
+};
