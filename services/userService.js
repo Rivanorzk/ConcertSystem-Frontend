@@ -5,39 +5,36 @@ import api from "@/lib/api";
 // ADMIN / SUPERADMIN
 // ================================
 
-export const getUsers = async (params = {}) => {
-    const response = await api.get("/users", { params });
-    return response.data.data;
+/** [ADMIN/SUPERADMIN] */
+export const getUsers = async () => {
+    const { data } = await api.get("/users");
+    return data.data;
 };
-
+ 
 export const getUserById = async (id) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data.data;
+    const { data } = await api.get(`/users/${id}`);
+    return data.data;
 };
-
-export const createUser = async (data) => {
-    const response = await api.post("/users", data);
-    return response.data.data;
+ 
+/** [SUPERADMIN only] */
+export const updateRole = async (id, role) => {
+    const { data } = await api.put(`/users/${id}/role`, { role });
+    return data.data;
 };
-
-export const updateUser = async (id, data) => {
-    const response = await api.put(`/users/${id}`, data);
-    return response.data.data;
+ 
+/** [ADMIN/SUPERADMIN] */
+export const updateStatus = async (id, status, isActive) => {
+    const { data } = await api.put(`/users/${id}/status`, {
+        status,
+        is_active: isActive,
+    });
+    return data.data;
 };
-
-export const updateUserRole = async (id, role) => {
-    const response = await api.patch(`/users/${id}/role`, { role });
-    return response.data.data;
-};
-
-export const updateUserStatus = async (id, isActive) => {
-    const response = await api.patch(`/users/${id}/status`, { is_active: isActive });
-    return response.data.data;
-};
-
+ 
+/** [SUPERADMIN only] */
 export const deleteUser = async (id) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data.data;
+    const { data } = await api.delete(`/users/${id}`);
+    return data.data;
 };
 
 // ================================

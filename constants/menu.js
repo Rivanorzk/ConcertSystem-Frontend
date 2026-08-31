@@ -89,14 +89,44 @@ export const menus = {
             icon: "LayoutDashboard",
         },
         {
+            title: "Event",
+            href: "/superadmin/events",
+            icon: "CalendarDays",
+        },
+        {
+            title: "Kategori Event",
+            href: "/superadmin/categories",
+            icon: "Tags",
+        },
+        {
+            title: "Kategori Tiket",
+            href: "/superadmin/ticket-categories",
+            icon: "Ticket",
+        },
+        {
+            title: "Voucher",
+            href: "/superadmin/vouchers",
+            icon: "Gift",
+        },
+        {
+            title: "Pesanan",
+            href: "/superadmin/orders",
+            icon: "ShoppingBag",
+        },
+        {
+            title: "Check-in",
+            href: "/superadmin/redemption",
+            icon: "QrCode",
+        },
+        {
             title: "Users",
             href: "/superadmin/users",
             icon: "ShieldCheck",
         },
         {
-            title: "Kategori",
-            href: "/superadmin/categories",
-            icon: "Tags",
+            title: "auditLog",
+            href: "/superadmin/audit-log",
+            icon: "ShieldCheck",
         },
         {
             title: "Profile",

@@ -1,275 +1,189 @@
+// app/superadmin/users/page.js
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-    Users,
-    Search,
-    Pencil,
-    UserCheck,
-    UserX,
-} from "lucide-react";
+import { ShieldCheck, Trash2 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import {
+    deleteUser,
     getUsers,
-    updateUserStatus,
+    updateUserRole,
+    updateStatus,
 } from "@/services/userService";
+import LoadingSpinner from "@/components/loadingSpinner";
+import EmptyState from "@/components/emptyState";
 
-export default function AdminUsersPage() {
+const ROLE_OPTIONS = ["customer", "admin", "superadmin"];
+
+const ROLE_BADGES = {
+    customer: "bg-[#EDEDED] text-[#737373]",
+    admin: "bg-[#FDF3D8] text-[#B4841F]",
+    superadmin: "bg-[#F3E4E4] text-[#B3261E]",
+};
+
+export default function UsersPage() {
     const [users, setUsers] = useState([]);
-    const [search, setSearch] = useState("");
-    const [role, setRole] = useState("all");
     const [loading, setLoading] = useState(true);
+    const [updatingId, setUpdatingId] = useState(null);
 
-    const loadUsers = async () => {
+    const load = async () => {
         try {
-            const response = await getUsers();
-
-            setUsers(
-                Array.isArray(response)
-                    ? response
-                    : []
-            );
-        } catch (error) {
-            console.error("Failed to load users:", error);
+            setLoading(true);
+            const data = await getUsers();
+            setUsers(data);
+        } catch (err) {
+            toast.error(err.message || "Gagal memuat user");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadUsers();
+        load();
     }, []);
 
-    const filteredUsers = users.filter((user) => {
-        const searchMatch =
-            user.username
-                ?.toLowerCase()
-                .includes(search.toLowerCase()) ||
-            user.email
-                ?.toLowerCase()
-                .includes(search.toLowerCase());
+    const handleRoleChange = async (user, newRole) => {
+        if (newRole === user.role) return;
 
-        const roleMatch =
-            role === "all" ||
-            user.role === role;
+        if (!confirm(`Ubah role "${user.username}" dari ${user.role} menjadi ${newRole}?`)) {
+            return;
+        }
 
-        return searchMatch && roleMatch;
-    });
-
-    const handleStatus = async (user) => {
         try {
-            const newStatus = user.is_active
-                ? false
-                : true;
-
-            await updateUserStatus(
-                user.id,
-                newStatus
+            setUpdatingId(user.id);
+            await updateRole(user.id, newRole);
+            toast.success("Role berhasil diperbarui");
+            setUsers((prev) =>
+                prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u))
             );
+        } catch (err) {
+            toast.error(err.message || "Gagal mengubah role");
+        } finally {
+            setUpdatingId(null);
+        }
+    };
 
-            setUsers((current) =>
-                current.map((item) =>
-                    item.id === user.id
-                        ? {
-                              ...item,
-                              is_active: newStatus,
-                          }
-                        : item
+    const handleToggleActive = async (user) => {
+        const nextActive = !user.is_active;
+
+        try {
+            setUpdatingId(user.id);
+            await updateStatus(
+                user.id,
+                nextActive ? "active" : "inactive",
+                nextActive
+            );
+            toast.success(
+                nextActive ? "User diaktifkan kembali" : "User dinonaktifkan"
+            );
+            setUsers((prev) =>
+                prev.map((u) =>
+                    u.id === user.id
+                        ? { ...u, is_active: nextActive, status: nextActive ? "active" : "inactive" }
+                        : u
                 )
             );
-        } catch (error) {
-            console.error(
-                "Failed to update user:",
-                error
-            );
+        } catch (err) {
+            toast.error(err.message || "Gagal mengubah status user");
+        } finally {
+            setUpdatingId(null);
+        }
+    };
 
-            alert("Failed to update user status.");
+    const handleDelete = async (user) => {
+        if (!confirm(`Hapus user "${user.username}"? Aksi ini permanen.`)) return;
+
+        try {
+            await deleteUser(user.id);
+            toast.success("User berhasil dihapus");
+            setUsers((prev) => prev.filter((u) => u.id !== user.id));
+        } catch (err) {
+            toast.error(err.message || "Gagal menghapus user");
         }
     };
 
     return (
-        <main className="min-h-screen bg-[#F8F1E7]">
-            <div className="max-w-[1600px] mx-auto px-5 py-6 lg:px-8">
+        <div>
+            <div className="mb-6">
+                <h1 className="flex items-center gap-2 text-xl font-bold text-[#1E1E1E]">
+                    <ShieldCheck className="h-5 w-5 text-[#7A1F2B]" />
+                    Users
+                </h1>
+                <p className="mt-1 text-sm text-[#8C7777]">
+                    {users.length} user terdaftar. Ubah role, aktif/nonaktifkan, atau hapus akun.
+                </p>
+            </div>
 
-                <div className="mb-7">
-                    <p className="text-sm text-[#8C7777]">
-                        Management
-                    </p>
-
-                    <h1 className="mt-1 text-3xl font-bold text-[#1E1E1E]">
-                        Users
-                    </h1>
-
-                    <p className="mt-2 text-sm text-[#8C7777]">
-                        Manage Eventify users and administrators.
-                    </p>
+            {loading ? (
+                <div className="flex justify-center py-16">
+                    <LoadingSpinner text="Memuat user..." />
                 </div>
-
-                <div className="bg-white border border-[#E5D6D0] rounded-2xl overflow-hidden">
-
-                    <div className="p-5 border-b border-[#E5D6D0] flex flex-col md:flex-row gap-3">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A78E8E]" />
-
-                            <input
-                                value={search}
-                                onChange={(e) =>
-                                    setSearch(e.target.value)
-                                }
-                                placeholder="Search username or email..."
-                                className="w-full rounded-xl border border-[#E5D6D0] bg-[#FCF9F5] py-3 pl-10 pr-4 text-sm outline-none"
-                            />
-                        </div>
-
-                        <select
-                            value={role}
-                            onChange={(e) =>
-                                setRole(e.target.value)
-                            }
-                            className="rounded-xl border border-[#E5D6D0] bg-[#FCF9F5] px-4 py-3 text-sm outline-none"
-                        >
-                            <option value="all">
-                                All Roles
-                            </option>
-
-                            <option value="customer">
-                                Customer
-                            </option>
-
-                            <option value="admin">
-                                Admin
-                            </option>
-
-                            <option value="superadmin">
-                                Super Admin
-                            </option>
-                        </select>
-                    </div>
-
+            ) : users.length === 0 ? (
+                <EmptyState title="Belum ada user" description="Belum ada user yang terdaftar." />
+            ) : (
+                <div className="overflow-hidden rounded-2xl border border-[#E5D6D0] bg-white">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[900px]">
-                            <thead>
-                                <tr className="bg-[#FCF9F5] border-b border-[#E5D6D0]">
-                                    <th className="px-5 py-4 text-left text-xs uppercase text-[#8C7777]">
-                                        User
-                                    </th>
-
-                                    <th className="px-5 py-4 text-left text-xs uppercase text-[#8C7777]">
-                                        Phone
-                                    </th>
-
-                                    <th className="px-5 py-4 text-left text-xs uppercase text-[#8C7777]">
-                                        Role
-                                    </th>
-
-                                    <th className="px-5 py-4 text-left text-xs uppercase text-[#8C7777]">
-                                        Status
-                                    </th>
-
-                                    <th className="px-5 py-4 text-right text-xs uppercase text-[#8C7777]">
-                                        Action
-                                    </th>
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#F8F1E7] text-xs uppercase tracking-wide text-[#8C7777]">
+                                <tr>
+                                    <th className="px-5 py-3 font-semibold">User</th>
+                                    <th className="px-5 py-3 font-semibold">Role</th>
+                                    <th className="px-5 py-3 font-semibold">Status</th>
+                                    <th className="px-5 py-3 text-right font-semibold">Aksi</th>
                                 </tr>
                             </thead>
-
-                            <tbody className="divide-y divide-[#F0E5DE]">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan="5" className="py-12 text-center text-sm text-[#8C7777]">
-                                            Loading users...
+                            <tbody className="divide-y divide-[#E5D6D0]">
+                                {users.map((user) => (
+                                    <tr key={user.id}>
+                                        <td className="px-5 py-3">
+                                            <p className="font-medium text-[#1E1E1E]">{user.username}</p>
+                                            <p className="text-xs text-[#8C7777]">{user.email}</p>
                                         </td>
-                                    </tr>
-                                ) : filteredUsers.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="py-12 text-center">
-                                            <Users className="w-8 h-8 mx-auto text-[#D8A7A7]" />
-
-                                            <p className="mt-3 text-sm text-[#8C7777]">
-                                                No users found
-                                            </p>
+                                        <td className="px-5 py-3">
+                                            <select
+                                                value={user.role}
+                                                disabled={updatingId === user.id}
+                                                onChange={(e) => handleRoleChange(user, e.target.value)}
+                                                className={`rounded-full border-0 px-3 py-1.5 text-xs font-semibold outline-none disabled:opacity-60 ${
+                                                    ROLE_BADGES[user.role] || "bg-[#F8F1E7] text-[#8C7777]"
+                                                }`}
+                                            >
+                                                {ROLE_OPTIONS.map((role) => (
+                                                    <option key={role} value={role}>
+                                                        {role}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </td>
-                                    </tr>
-                                ) : (
-                                    filteredUsers.map((user) => (
-                                        <tr
-                                            key={user.id}
-                                            className="hover:bg-[#FCF9F5]"
-                                        >
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-[#D8A7A7] flex items-center justify-center">
-                                                        <Users className="w-5 h-5 text-[#5B0F18]" />
-                                                    </div>
-
-                                                    <div>
-                                                        <p className="text-sm font-semibold">
-                                                            {user.username}
-                                                        </p>
-
-                                                        <p className="text-xs text-[#8C7777]">
-                                                            {user.email}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4 text-sm text-[#5F5050]">
-                                                {user.phone || "-"}
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <span className="rounded-full bg-[#F8F1E7] px-3 py-1 text-[11px] font-semibold text-[#7A1F2B] capitalize">
-                                                    {user.role}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${
+                                        <td className="px-5 py-3">
+                                            <button
+                                                onClick={() => handleToggleActive(user)}
+                                                disabled={updatingId === user.id}
+                                                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
                                                     user.is_active
-                                                        ? "bg-green-50 text-green-700"
-                                                        : "bg-red-50 text-red-700"
-                                                }`}>
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                    {user.is_active
-                                                        ? "Active"
-                                                        : "Inactive"}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex justify-end gap-2">
-                                                    <button className="w-9 h-9 rounded-lg border border-[#E5D6D0] flex items-center justify-center text-[#7A1F2B]">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            handleStatus(
-                                                                user
-                                                            )
-                                                        }
-                                                        className={`w-9 h-9 rounded-lg border flex items-center justify-center ${
-                                                            user.is_active
-                                                                ? "border-red-100 text-red-600"
-                                                                : "border-green-100 text-green-600"
-                                                        }`}
-                                                    >
-                                                        {user.is_active ? (
-                                                            <UserX className="w-4 h-4" />
-                                                        ) : (
-                                                            <UserCheck className="w-4 h-4" />
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                                        ? "bg-[#E4F3EA] text-[#1E7A4C] hover:bg-[#d5ecdf]"
+                                                        : "bg-[#F3E4E4] text-[#B3261E] hover:bg-[#efd6d6]"
+                                                }`}
+                                            >
+                                                {user.is_active ? "Aktif" : "Nonaktif"}
+                                            </button>
+                                        </td>
+                                        <td className="px-5 py-3 text-right">
+                                            <button
+                                                onClick={() => handleDelete(user)}
+                                                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8C7777] transition hover:bg-[#F3E4E4] hover:text-[#B3261E]"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
-        </main>
+            )}
+        </div>
     );
 }

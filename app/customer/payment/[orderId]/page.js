@@ -88,6 +88,7 @@ export default function PaymentPage() {
     const [payingLoading, setPayingLoading] = useState(false);
 
     const pollRef = useRef(null);
+    const hasRequestedPaymentRef = useRef(false);
 
     const countdown = useCountdown(order?.expired_at);
 
@@ -100,8 +101,21 @@ export default function PaymentPage() {
             setOrder(orderData);
 
             if (orderData.status === "pending") {
-                const paymentData = await createPayment(orderId);
-                setPayment((prev) => ({ ...prev, ...paymentData }));
+                if (hasRequestedPaymentRef.current) {
+                    // createPayment sudah/sedang diminta di render sebelumnya
+                    // (mis. React dev mode memanggil effect 2x) — jangan
+                    // kirim request duplikat, tinggal ambil payment yg ada.
+                    try {
+                        const paymentData = await getPayment(orderId);
+                        setPayment(paymentData);
+                    } catch {
+                        // payment belum sempat tercatat, biarkan poll berikutnya yang ambil
+                    }
+                } else {
+                    hasRequestedPaymentRef.current = true;
+                    const paymentData = await createPayment(orderId);
+                    setPayment((prev) => ({ ...prev, ...paymentData }));
+                }
             } else {
                 try {
                     const paymentData = await getPayment(orderId);
